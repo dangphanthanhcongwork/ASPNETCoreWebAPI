@@ -1,10 +1,10 @@
-namespace WebApplication.Repositories
+namespace WebApplication.Services
 {
-    public class TaskRepository : ITaskRepository
+    public class TaskService
     {
-        private readonly List<Models.Task> _tasks = new List<Models.Task>();
+        private readonly List<Models.Task> _tasks = [];
 
-        public TaskRepository()
+        public TaskService()
         {
             // add your dummy data here
             _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 1", IsCompleted = true });
@@ -27,6 +27,7 @@ namespace WebApplication.Repositories
 
         public async Task<Models.Task> Add(Models.Task task)
         {
+            task.Id = GenerateUniqueGuid();
             _tasks.Add(task);
             return await System.Threading.Tasks.Task.FromResult(task);
         }
@@ -42,11 +43,6 @@ namespace WebApplication.Repositories
         {
             var task = await GetTask(id);
             _tasks.Remove(task);
-        }
-
-        public async Task<bool> CheckIfGuidExists(Guid id)
-        {
-            return await System.Threading.Tasks.Task.FromResult(_tasks.Any(t => t.Id == id));
         }
 
         public async Task<IEnumerable<Models.Task>> BulkAdd(IEnumerable<Models.Task> tasks)
@@ -66,18 +62,20 @@ namespace WebApplication.Repositories
             await System.Threading.Tasks.Task.CompletedTask;
         }
 
+        public async Task<bool> CheckIfGuidExists(Guid id)
+        {
+            return await System.Threading.Tasks.Task.FromResult(_tasks.Any(t => t.Id == id));
+        }
+
         private Guid GenerateUniqueGuid()
         {
-            Guid newGuid;
-            bool exists;
-
-            do
+            Guid newId = Guid.NewGuid();
+            while (_tasks.Any(t => t.Id == newId))
             {
-                newGuid = Guid.NewGuid();
-                exists = _tasks.Any(t => t.Id == newGuid);
-            } while (exists);
+                newId = Guid.NewGuid();
+            }
 
-            return newGuid;
+            return newId;
         }
     }
 }
