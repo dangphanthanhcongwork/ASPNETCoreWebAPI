@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using WebApplication.Repositories;
+using WebApplication.Services;
 
 namespace WebApplication.Controllers
 {
@@ -7,18 +7,18 @@ namespace WebApplication.Controllers
     [ApiController]
     public class TasksController : ControllerBase
     {
-        private readonly ITaskRepository _taskRepository;
+        private readonly TaskService _taskService;
 
-        public TasksController(ITaskRepository taskRepository)
+        public TasksController(TaskService taskService)
         {
-            _taskRepository = taskRepository;
+            _taskService = taskService;
         }
 
         // GET: api/Tasks
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Models.Task>>> GetTasks()
         {
-            var tasks = await _taskRepository.GetAllTasks();
+            var tasks = await _taskService.GetAllTasks();
 
             return Ok(tasks);
         }
@@ -29,7 +29,7 @@ namespace WebApplication.Controllers
         {
             try
             {
-                var task = await _taskRepository.GetTask(id);
+                var task = await _taskService.GetTask(id);
                 return Ok(task);
             }
             catch (Exception)
@@ -47,12 +47,12 @@ namespace WebApplication.Controllers
                 return BadRequest();
             }
 
-            if (!await _taskRepository.CheckIfGuidExists(id))
+            if (!await _taskService.CheckIfGuidExists(id))
             {
                 return NotFound();
             }
 
-            var updatedTask = await _taskRepository.Update(task);
+            var updatedTask = await _taskService.Update(task);
             return Ok(updatedTask);
         }
 
@@ -60,8 +60,7 @@ namespace WebApplication.Controllers
         [HttpPost]
         public async Task<ActionResult<Models.Task>> PostTask(Models.Task task)
         {
-            task.Id = await GenerateUniqueGuid();
-            var createdTask = await _taskRepository.Add(task);
+            var createdTask = await _taskService.Add(task);
 
             return CreatedAtAction(nameof(GetTask), new { id = createdTask.Id }, createdTask);
         }
@@ -70,12 +69,12 @@ namespace WebApplication.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(Guid id)
         {
-            if (!await _taskRepository.CheckIfGuidExists(id))
+            if (!await _taskService.CheckIfGuidExists(id))
             {
                 return NotFound();
             }
 
-            await _taskRepository.Delete(id);
+            await _taskService.Delete(id);
             return NoContent();
         }
 
@@ -83,7 +82,7 @@ namespace WebApplication.Controllers
         [HttpPost("BulkAdd")]
         public async Task<ActionResult<IEnumerable<Models.Task>>> BulkAddTasks(IEnumerable<Models.Task> tasks)
         {
-            var createdTasks = await _taskRepository.BulkAdd(tasks);
+            var createdTasks = await _taskService.BulkAdd(tasks);
 
             return Ok(createdTasks);
         }
@@ -92,22 +91,8 @@ namespace WebApplication.Controllers
         [HttpDelete("BulkDelete")]
         public async Task<IActionResult> BulkDeleteTasks(IEnumerable<Guid> ids)
         {
-            await _taskRepository.BulkDelete(ids);
+            await _taskService.BulkDelete(ids);
             return NoContent();
-        }
-
-        private async Task<Guid> GenerateUniqueGuid()
-        {
-            Guid newGuid;
-            bool exists;
-
-            do
-            {
-                newGuid = Guid.NewGuid();
-                exists = await _taskRepository.CheckIfGuidExists(newGuid);
-            } while (exists);
-
-            return newGuid;
         }
     }
 }
