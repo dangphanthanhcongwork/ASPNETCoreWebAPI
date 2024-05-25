@@ -1,98 +1,98 @@
 using Microsoft.AspNetCore.Mvc;
+using WebApplication.DTOs;
 using WebApplication.Services;
 
 namespace WebApplication.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/tasks")]
     [ApiController]
     public class TasksController : ControllerBase
     {
-        private readonly TaskService _taskService;
+        private readonly ITaskService _service;
 
-        public TasksController(TaskService taskService)
+        public TasksController(ITaskService service)
         {
-            _taskService = taskService;
+            _service = service;
         }
 
-        // GET: api/Tasks
+        // GET: api/tasks
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Models.Task>>> GetTasks()
+        public async Task<IActionResult> GetTasks()
         {
-            var tasks = await _taskService.GetAllTasks();
-
+            var tasks = await _service.GetTasks();
             return Ok(tasks);
         }
 
-        // GET: api/Tasks/{id}
+        // GET: api/tasks/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Models.Task>> GetTask(Guid id)
+        public async Task<IActionResult> GetTask(Guid id)
         {
             try
             {
-                var task = await _taskService.GetTask(id);
+                var task = await _service.GetTask(id);
                 return Ok(task);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return NotFound();
+                return NotFound(ex.Message);
             }
         }
 
-        // PUT: api/Tasks/{id}
+        // PUT: api/tasks/{id}
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTask(Guid id, Models.Task task)
+        public async Task<IActionResult> PutTask(Guid id, TaskDTO taskDTO)
         {
-            if (id != task.Id)
+            try
             {
-                return BadRequest();
+                await _service.PutTask(id, taskDTO);
+                return NoContent();
             }
-
-            if (!await _taskService.CheckIfGuidExists(id))
+            catch (Exception ex)
             {
-                return NotFound();
+                return NotFound(ex.Message);
             }
-
-            var updatedTask = await _taskService.Update(task);
-            return Ok(updatedTask);
         }
 
-        // POST: api/Tasks
+        // POST: api/tasks
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Models.Task>> PostTask(Models.Task task)
+        public async Task<IActionResult> PostTask(TaskDTO taskDTO)
         {
-            var createdTask = await _taskService.Add(task);
-
-            return CreatedAtAction(nameof(GetTask), new { id = createdTask.Id }, createdTask);
+            await _service.PostTask(taskDTO);
+            return CreatedAtAction(nameof(GetTask), new { Id = Guid.NewGuid() }, taskDTO);
         }
 
-        // DELETE: api/Tasks/{id}
+        // DELETE: api/tasks/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(Guid id)
         {
-            if (!await _taskService.CheckIfGuidExists(id))
+            try
             {
-                return NotFound();
+                await _service.DeleteTask(id);
+                return NoContent();
             }
+            catch (Exception ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
 
-            await _taskService.Delete(id);
+        // POST: api/tasks/bulk-post
+        [HttpPost("bulk-post")]
+        public async Task<IActionResult> BulkPostTasks(List<TaskDTO> taskDTOs)
+        {
+            await _service.BulkPostTasks(taskDTOs);
+            return CreatedAtAction(nameof(GetTasks), taskDTOs);
+        }
+
+        // DELETE: api/tasks/bulk-delete
+        [HttpDelete("bulk-delete")]
+        public async Task<IActionResult> BulkDeleteTasks(List<Guid> ids)
+        {
+            await _service.BulkDeleteTasks(ids);
             return NoContent();
         }
 
-        // POST: api/Tasks/BulkAdd
-        [HttpPost("BulkAdd")]
-        public async Task<ActionResult<IEnumerable<Models.Task>>> BulkAddTasks(IEnumerable<Models.Task> tasks)
-        {
-            var createdTasks = await _taskService.BulkAdd(tasks);
-
-            return Ok(createdTasks);
-        }
-
-        // DELETE: api/Tasks/BulkDelete
-        [HttpDelete("BulkDelete")]
-        public async Task<IActionResult> BulkDeleteTasks(IEnumerable<Guid> ids)
-        {
-            await _taskService.BulkDelete(ids);
-            return NoContent();
-        }
     }
 }

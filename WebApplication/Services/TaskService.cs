@@ -1,81 +1,78 @@
+using AutoMapper;
+using WebApplication.DTOs;
+using WebApplication.Repositories;
+
 namespace WebApplication.Services
 {
-    public class TaskService
+    public class TaskService : ITaskService
     {
-        private readonly List<Models.Task> _tasks = [];
+        private readonly ITaskRepository _repository;
+        private readonly IMapper _mapper;
 
-        public TaskService()
+        public TaskService(ITaskRepository repository, IMapper mapper)
         {
-            // add your dummy data here
-            _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 1", IsCompleted = true });
-            _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 2", IsCompleted = true });
-            _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 3", IsCompleted = false });
-            _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 4", IsCompleted = false });
-            _tasks.Add(new Models.Task { Id = GenerateUniqueGuid(), Title = "Task 5", IsCompleted = false });
+            _repository = repository;
+            _mapper = mapper;
+        }
+
+        public async Task<IEnumerable<Models.Task>> GetTasks()
+        {
+            return await _repository.GetTasks();
         }
 
         public async Task<Models.Task> GetTask(Guid id)
         {
-            var task = _tasks.Find(t => t.Id == id) ?? throw new Exception("Task not found");
-            return await System.Threading.Tasks.Task.FromResult(task);
-        }
-
-        public async Task<IEnumerable<Models.Task>> GetAllTasks()
-        {
-            return await System.Threading.Tasks.Task.FromResult(_tasks.AsEnumerable());
-        }
-
-        public async Task<Models.Task> Add(Models.Task task)
-        {
-            task.Id = GenerateUniqueGuid();
-            _tasks.Add(task);
-            return await System.Threading.Tasks.Task.FromResult(task);
-        }
-
-        public async Task<Models.Task> Update(Models.Task task)
-        {
-            var index = _tasks.FindIndex(existingTask => existingTask.Id == task.Id);
-            _tasks[index] = task;
-            return await System.Threading.Tasks.Task.FromResult(task);
-        }
-
-        public async System.Threading.Tasks.Task Delete(Guid id)
-        {
-            var task = await GetTask(id);
-            _tasks.Remove(task);
-        }
-
-        public async Task<IEnumerable<Models.Task>> BulkAdd(IEnumerable<Models.Task> tasks)
-        {
-            foreach (var task in tasks)
+            try
             {
-                task.Id = GenerateUniqueGuid();
-                _tasks.Add(task);
+                return await _repository.GetTask(id);
             }
-
-            return await System.Threading.Tasks.Task.FromResult(tasks);
-        }
-
-        public async System.Threading.Tasks.Task BulkDelete(IEnumerable<Guid> ids)
-        {
-            _tasks.RemoveAll(task => ids.Contains(task.Id));
-            await System.Threading.Tasks.Task.CompletedTask;
-        }
-
-        public async Task<bool> CheckIfGuidExists(Guid id)
-        {
-            return await System.Threading.Tasks.Task.FromResult(_tasks.Any(t => t.Id == id));
-        }
-
-        private Guid GenerateUniqueGuid()
-        {
-            Guid newId = Guid.NewGuid();
-            while (_tasks.Any(t => t.Id == newId))
+            catch (Exception)
             {
-                newId = Guid.NewGuid();
+                throw;
             }
+        }
 
-            return newId;
+        public async Task PutTask(Guid id, TaskDTO taskDTO)
+        {
+            try
+            {
+                var task = _mapper.Map<Models.Task>(taskDTO);
+                task.Id = id;
+                await _repository.PutTask(id, task);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task PostTask(TaskDTO taskDTO)
+        {
+            var task = _mapper.Map<Models.Task>(taskDTO);
+            await _repository.PostTask(task);
+        }
+
+        public async Task DeleteTask(Guid id)
+        {
+            try
+            {
+                await _repository.DeleteTask(id);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task BulkPostTasks(List<TaskDTO> taskDTOs)
+        {
+            var tasks = _mapper.Map<List<Models.Task>>(taskDTOs);
+            await _repository.BulkPostTasks(tasks);
+        }
+
+        public async Task BulkDeleteTasks(List<Guid> ids)
+        {
+            await _repository.BulkDeleteTasks(ids);
         }
     }
 }
